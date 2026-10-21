@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encuesta de satisfacción · AtyÑe’ẽ</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* La app fija el body a la pantalla; esta página es un formulario que puede scrollear */
+        body { height: auto; min-height: 100vh; overflow: auto; padding: 32px 16px; }
+        .encuesta { max-width: 560px; margin: 0 auto; }
+        .marca { text-align: center; margin-bottom: 24px; }
+        .marca h1 { color: var(--primary-dark); font-size: 1.8rem; }
+        .marca p { color: var(--text-muted); font-size: 0.9rem; }
+        fieldset { border: none; margin-bottom: 28px; }
+        legend { font-weight: 600; margin-bottom: 12px; }
+        .escala { display: flex; flex-wrap: wrap; gap: 8px; }
+        .escala input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .escala label {
+            min-width: 44px; height: 44px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid var(--border-color); border-radius: var(--radius-md); cursor: pointer; font-weight: 600; background: var(--bg-white);
+        }
+        .escala input:checked + label { background: var(--primary-main); border-color: var(--primary-main); color: white; }
+        .escala input:focus-visible + label { outline: 3px solid var(--accent-lime); outline-offset: 2px; }
+        .extremos { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }
+        textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font: inherit; resize: vertical; }
+        .aviso { padding: 12px; border-radius: var(--radius-md); font-size: 0.9rem; margin-bottom: 16px; background: rgba(225,48,108,0.08); color: #B0174F; }
+        .listo { text-align: center; padding: 24px 0; }
+        .listo .icono { font-size: 2.5rem; }
+    </style>
+</head>
+<body>
+    <main class="encuesta">
+        <div class="marca">
+            <h1>AtyÑe’ẽ</h1>
+            <p>Encuesta de satisfacción</p>
+        </div>
+        <div class="card" id="contenido"><p style="color: var(--text-muted);">Cargando…</p></div>
+    </main>
+
+    <script>
+        const token = new URLSearchParams(location.search).get('t') || '';
+        const api = location.pathname.replace(/[^/]*$/, '') + 'api/encuesta';
+        const contenido = document.getElementById('contenido');
+
+        const mensaje = (icono, titulo, texto) => {
+            contenido.innerHTML = '<div class="listo"><div class="icono"></div><h2 style="margin: 8px 0;"></h2><p style="color: var(--text-muted);"></p></div>';
+            contenido.querySelector('.icono').textContent = icono;
+            contenido.querySelector('h2').textContent = titulo;
+            contenido.querySelector('p').textContent = texto;
+        };
+
+        const escala = (nombre, desde, hasta) => {
+            let html = '';
+            for (let i = desde; i <= hasta; i++) {
+                html += `<input type="radio" name="${nombre}" id="${nombre}-${i}" value="${i}" required><label for="${nombre}-${i}">${i}</label>`;
+            }
+            return `<div class="escala">${html}</div>`;
+        };
+
+        async function iniciar() {
+            let datos;
+            try {
+                const res = await fetch(`${api}?t=${encodeURIComponent(token)}`);
+                datos = await res.json();
+            } catch (e) {
+                return mensaje('⚠️', 'No pudimos cargar la encuesta', 'Probá de nuevo en unos minutos.');
+            }
+            if (!datos.success) return mensaje('🔍', 'Encuesta no encontrada', 'Revisá que el enlace esté completo.');
+            if (datos.data.respondida) return mensaje('💜', '¡Ya respondiste esta encuesta!', 'Gracias por ayudarnos a mejorar.');
+
+            contenido.innerHTML = `
+                <p style="margin-bottom: 4px;">Consulta <strong id="ticket"></strong></p>
+                <p style="color: var(--text-muted); margin-bottom: 24px;" id="asunto"></p>
+                <div class="aviso" id="error" role="alert" hidden></div>
+                <form id="form" novalidate>
+                    <fieldset>
+                        <legend>¿Qué tan satisfecho/a quedaste con la atención?</legend>
+                        ${escala('csat', 1, 5)}
+                        <div class="extremos"><span>1 · Nada satisfecho</span><span>5 · Muy satisfecho</span></div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>¿Qué tan probable es que nos recomiendes a un amigo o colega?</legend>
+                        ${escala('nps', 0, 10)}
+                        <div class="extremos"><span>0 · Nada probable</span><span>10 · Muy probable</span></div>
+                    </fieldset>
+                    <fieldset>
+                        <legend><label for="comentario">¿Querés contarnos algo más? (opcional)</label></legend>
+                        <textarea id="comentario" rows="4" maxlength="2000"></textarea>
+                    </fieldset>
+                    <button class="btn btn-primary" type="submit" style="width: 100%; justify-content: center; padding: 14px;">Enviar respuesta</button>
+                </form>`;
+            document.getElementById('ticket').textContent = '#' + datos.data.codigo_ticket;
+            document.getElementById('asunto').textContent = datos.data.asunto;
+            document.getElementById('form').addEventListener('submit', enviar);
+        }
+
+        async function enviar(ev) {
+            ev.preventDefault();
+            const form = ev.target;
+            const error = document.getElementById('error');
+            const csat = form.csat.value, nps = form.nps.value;
+            if (!csat || !nps) {
+                error.textContent = 'Elegí una puntuación en las dos preguntas.';
+                error.hidden = false;
+                return;
+            }
+            const boton = form.querySelector('button');
+            boton.disabled = true;
+            try {
+                const res = await fetch(api, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ t: token, csat: Number(csat), nps: Number(nps), comentario: form.comentario.value })
+                });
+                const datos = await res.json();
+                if (datos.success || res.status === 409) return mensaje('💜', '¡Gracias por tu respuesta!', 'Nos ayuda a mejorar la atención.');
+                error.textContent = datos.message || 'No se pudo guardar la respuesta.';
+            } catch (e) {
+                error.textContent = 'No se pudo enviar. Revisá tu conexión y probá de nuevo.';
+            }
+            error.hidden = false;
+            boton.disabled = false;
+        }
+
+        iniciar();
+    </script>
+</body>
+</html>
