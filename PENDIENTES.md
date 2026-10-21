@@ -15,6 +15,8 @@ cd ~/dev/gestion-multicanal/gestion-multicanal
 - Base: `127.0.0.1:3306`, `atynere_db`, usuario `root` / `root`.
 - Apagar: `podman stop atynere-api atynere-db`. Los datos quedan en el volumen `atynere-data`.
 
+**En una Mac (sin Homebrew ni contraseña de administrador):** `./levantar-mac.sh`, o doble clic en "Iniciar AtyÑe'ẽ" del Escritorio. La primera vez descarga PHP 8.3 y MySQL 8.4 (unos 250 MB) en `~/atynere-entorno` y carga los datos de prueba; después arranca en segundos y abre el navegador. Se apaga con Ctrl+C o cerrando la ventana. `--reiniciar` vuelve a los datos de prueba. Probado el 20/10 en la Mac Intel de Daiana (macOS 14.7) con todos los recorridos en navegador. Homebrew ya no soporta Mac Intel, por eso se usan binarios sueltos.
+
 ## Qué ya funciona contra la base
 
 | Pantalla | Estado |
