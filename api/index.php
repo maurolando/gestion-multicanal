@@ -20,6 +20,7 @@ require_once __DIR__ . '/controllers/CanalesController.php';
 require_once __DIR__ . '/controllers/ReportesController.php';
 require_once __DIR__ . '/controllers/EncuestasController.php';
 require_once __DIR__ . '/controllers/UsuariosController.php';
+require_once __DIR__ . '/controllers/TelegramController.php';
 
 // 3. Determinar el Método HTTP
 $method = $_SERVER['REQUEST_METHOD'];

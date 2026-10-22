@@ -295,6 +295,15 @@ class ConsultasController {
 
         $db = Database::getConnection();
 
+        // Si la consulta entró por Telegram, la respuesta del agente se manda primero al cliente:
+        // si no sale, no se guarda, para que el chat no muestre como enviado algo que el cliente no recibió
+        if (!$esCliente && ($chatId = TelegramController::chatDeConsulta($db, $consultaId))) {
+            $error = TelegramController::enviar($chatId, $mensaje);
+            if ($error) {
+                Response::error('No se pudo enviar por Telegram: ' . $error, 502);
+            }
+        }
+
         // 1. Insertar el mensaje
         $stmt = $db->prepare("
             INSERT INTO historial_interacciones (consulta_id, usuario_id, es_cliente, mensaje, adjunto_url, fecha_interaccion)

@@ -67,6 +67,7 @@ CREATE TABLE clientes (
     canal_preferido_id INT,
     estado ENUM('Activo', 'Inactivo', 'VIP') DEFAULT 'Activo',
     notas TEXT,
+    telegram_chat_id VARCHAR(30) UNIQUE, -- chat con el bot si escribió por Telegram; ahí se le responde
     fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_clientes_canales FOREIGN KEY (canal_preferido_id) REFERENCES canales(id) ON DELETE SET NULL

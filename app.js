@@ -2736,8 +2736,10 @@ async function syncWithBackendIfAvailable() {
                 ]
             }));
             if (state.consultas.length > 0) {
-                state.selectedConsultaId = state.consultas[0].id;
-                cargarMensajesConsulta(state.consultas[0]);
+                // Al volver a sincronizar se queda en la consulta que estaba abierta
+                const abierta = state.consultas.find(c => c.id === state.selectedConsultaId) || state.consultas[0];
+                state.selectedConsultaId = abierta.id;
+                cargarMensajesConsulta(abierta);
             }
         }
         render();
@@ -2751,5 +2753,26 @@ render();
 if (state.currentView === 'dashboard') cargarDashboard();
 if (state.user) syncWithBackendIfAvailable();
 else window.apiService.checkHealth(); // saber si hay API antes del login (si no, se entra en modo demo)
+
+// Lo que entra por Telegram aparece sin recargar: cada 15 s se mira si cambió la lista de consultas
+// (nuevas, mensajes o estados) y, si cambió, se vuelve a sincronizar. Solo en Dashboard y Consultas, y nunca
+// mientras se escribe o hay una ventana abierta, porque render() borraría lo escrito.
+let firmaConsultas = null;
+setInterval(async () => {
+    if (!state.user || !window.apiService.isOnline || document.hidden) return;
+    if (!['dashboard', 'consultas'].includes(state.currentView)) return;
+    const activo = document.activeElement;
+    const escribiendo = activo && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activo.tagName);
+    const respuesta = document.getElementById('responder-input-txt');
+    if (escribiendo || (respuesta && respuesta.value.trim()) || document.getElementById('modal-overlay')) return;
+    const lista = await window.apiService.fetchConsultas();
+    if (!lista) return;
+    const firma = lista.map(c => `${c.id}:${c.total_mensajes}:${c.estado}`).join(',');
+    if (firmaConsultas !== null && firma !== firmaConsultas) {
+        await syncWithBackendIfAvailable();
+        if (state.currentView === 'dashboard') cargarDashboard();
+    }
+    firmaConsultas = firma;
+}, 15000);
 
 

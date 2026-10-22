@@ -1,6 +1,6 @@
 # Pendientes — AtyÑe'ẽ (gestión multicanal)
 
-Última actualización: 20/10/2026 (noche)
+Última actualización: 22/10/2026
 
 ## Cómo retomar
 
@@ -37,6 +37,7 @@ cd ~/dev/gestion-multicanal/gestion-multicanal
 | Login seguro | Bloqueo de 15 min tras 5 intentos fallidos (RF-10); todos los intentos, también los fallidos, quedan en el historial; cambio de contraseña (ícono de llave) con mínimo 8 caracteres, letras, números y un carácter especial |
 | Prioridad | Se elige al crear, se cambia en Modificar (queda en el historial) y Alta/Urgente se marcan en la lista |
 | Usuarios | Pantalla solo para Administrador: alta, edición (nombre, correo, rol, estado), restablecer contraseña y desbloquear. Sin baja: se pasa a Inactivo y su sesión se corta. Nadie puede quitarse a sí mismo el rol de Administrador ni desactivarse. Todo queda en el historial |
+| Telegram | Lo que un cliente le escribe al bot entra como consulta del canal Telegram (o se suma a su consulta abierta); lo que el agente responde le llega por Telegram, y si no sale, la app avisa y no lo guarda. La encuesta también se le manda. La pantalla busca novedades cada 15 s (en Dashboard y Consultas, sin pisar lo que se está escribiendo). Detalle abajo |
 | Historial | Tabla `historial_estado`: altas, estados, asignaciones (RF-50), cierres, ediciones y bajas de consultas; inicios y cierres de sesión, exportaciones de PDF y altas, ediciones, activaciones y desactivaciones de canales (DCU007). Los eventos que no son de un ticket tienen `codigo_ticket` en NULL |
 
 ## Pendientes
@@ -45,7 +46,8 @@ Ya no quedan pendientes grandes; lo que sigue son mejoras menores.
 
 ### Lo que falta (no se puede resolver solo con código)
 - **Recuperar contraseña por correo:** el documento lo pide, pero hace falta un servidor de correo. Hoy "¿Olvidaste tu contraseña?" dice que se la pidan a un administrador, que la restablece desde Usuarios.
-- **Envío real de la encuesta y canales sin integración:** sin WhatsApp ni correo conectados, el enlace de la encuesta queda en el chat y el agente se lo pasa al cliente. Crear un canal solo lo da de alta en la base; no se puede borrar ni renombrar.
+- **Envío real de la encuesta y canales sin integración:** salvo Telegram, los canales no están conectados: el enlace de la encuesta queda en el chat y el agente se lo pasa al cliente. Crear un canal solo lo da de alta en la base; no se puede borrar ni renombrar.
+- **Enlace de la encuesta por Telegram:** se arma con la dirección desde la que se usa la app. Con la app en `localhost` el cliente recibe un enlace que no puede abrir; sirve recién con la app publicada.
 - **HTTPS:** al publicar, servir por HTTPS; la cookie se marca `Secure` sola en ese caso.
 
 ### Límites conocidos (decisiones, no errores)
@@ -53,6 +55,16 @@ Ya no quedan pendientes grandes; lo que sigue son mejoras menores.
 - **Diferencias con el documento:** `encuesta_satisfaccion` usa `id` INT y `consulta_id` en vez de CHAR(36) y `caso_id`, como el resto del esquema; `csat` y `nps` admiten NULL hasta que el cliente responde.
 - **Cierre de sesión sin registrar:** si se cierra el navegador sin tocar "Cerrar Sesión", no queda registrado. El PDF se registra al tocar Imprimir, aunque después se cancele el diálogo.
 - **Bloqueo y enumeración:** el mensaje de "cuenta bloqueada" revela que ese correo existe. Es el precio de bloquear por cuenta, como pide el documento.
+
+## Telegram
+
+**Activarlo:** crear el bot hablándole a @BotFather en Telegram (`/newbot`); da un token como `123456:ABC...`. Guardarlo en `~/.atynere-telegram-token` (fuera del proyecto: el servidor web publica la carpeta del proyecto) o pasarlo como `TELEGRAM_BOT_TOKEN=... ./levantar.sh`. `levantar.sh` y `levantar-mac.sh` arrancan el receptor solos si hay token. No hace falta HTTPS ni dirección pública: `api/telegram-polling.php` le pregunta a Telegram por mensajes nuevos (long polling), así que anda en una notebook.
+
+**Cómo funciona:** el cliente se reconoce por su chat (`clientes.telegram_chat_id`); la primera vez se crea con el nombre de su perfil de Telegram. Si tiene una consulta de Telegram sin cerrar, el mensaje se suma a esa; si no, se abre una nueva (asunto = el comienzo del mensaje, prioridad Media, sin asignar). Desactivar el canal Telegram en Canales hace que el bot conteste que no se está atendiendo por ahí. Código: `api/controllers/TelegramController.php`.
+
+**Límites:** solo texto (a fotos, audios o stickers el bot contesta que por ahora solo lee texto); solo chats privados con el bot, no grupos; un solo bot por instalación. No se probó todavía con un bot real: se probó la entrada simulando mensajes de Telegram y la salida con un token falso (la API devuelve 502 y el mensaje no se guarda). Con un hosting que no deje correr procesos de fondo haría falta un webhook en lugar del receptor.
+
+**Bases creadas antes del 22/10:** correr el paso 8 de `database/migracion_mysql.sql`. En PostgreSQL: `ALTER TABLE clientes ADD COLUMN telegram_chat_id VARCHAR(30) UNIQUE; INSERT INTO canales (nombre, codigo, icono, color) VALUES ('Telegram', 'TELEGRAM', 'ph-telegram-logo', '#229ED9');`. La base local de esta máquina ya se migró el 22/10.
 
 ## Notas para quien siga
 

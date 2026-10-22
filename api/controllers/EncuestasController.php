@@ -10,7 +10,7 @@ require_once __DIR__ . '/../helpers/Response.php';
 class EncuestasController {
     /**
      * Crea la encuesta de un caso y deja el enlace como mensaje del agente en el chat.
-     * Sin canales integrados no se puede mandar por WhatsApp o correo: el enlace queda en la conversación.
+     * Si el caso entró por Telegram se le manda al cliente; en los demás canales el enlace queda en la conversación.
      * Devuelve el enlace, o null si el caso ya tenía encuesta (una por caso, aunque se reabra y se vuelva a cerrar).
      */
     public static function crear($db, $consultaId, $codigo, $actorId) {
@@ -26,10 +26,15 @@ class EncuestasController {
         $raiz = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\'); // la app está un nivel arriba de /api
         $enlace = ($https ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $raiz . '/encuesta.html?t=' . $token;
 
+        $mensaje = "¡Gracias por comunicarte con AtyÑe'ẽ! ¿Nos ayudás a mejorar? Calificá la atención que recibiste:\n$enlace";
         $db->prepare("INSERT INTO historial_interacciones (consulta_id, usuario_id, es_cliente, mensaje, fecha_interaccion)
                       VALUES (:id, :usuario, FALSE, :mensaje, CURRENT_TIMESTAMP)")
-           ->execute([':id' => $consultaId, ':usuario' => $actorId,
-                      ':mensaje' => "¡Gracias por comunicarte con AtyÑe'ẽ! ¿Nos ayudás a mejorar? Calificá la atención que recibiste:\n$enlace"]);
+           ->execute([':id' => $consultaId, ':usuario' => $actorId, ':mensaje' => $mensaje]);
+        // Si el caso entró por Telegram, también le llega al cliente. Si falla, el enlace igual queda en el chat
+        // y el cierre no se frena por eso.
+        if ($chatId = TelegramController::chatDeConsulta($db, $consultaId)) {
+            TelegramController::enviar($chatId, $mensaje);
+        }
         ConsultasController::registrarHistorial($db, $consultaId, $codigo, 'Encuesta enviada', null, null, $actorId);
         return $enlace;
     }

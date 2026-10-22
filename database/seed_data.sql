@@ -17,7 +17,8 @@ INSERT INTO canales (nombre, codigo, icono, color) VALUES
 ('Facebook Messenger', 'FACEBOOK', 'ph-facebook-logo', '#0084FF'),
 ('Instagram Direct', 'INSTAGRAM', 'ph-instagram-logo', '#E1306C'),
 ('Correo Electrónico', 'EMAIL', 'ph-envelope-simple', '#4A148C'),
-('WebChat Directo', 'WEBCHAT', 'ph-chat-circle-dots', '#AEEA00');
+('WebChat Directo', 'WEBCHAT', 'ph-chat-circle-dots', '#AEEA00'),
+('Telegram', 'TELEGRAM', 'ph-telegram-logo', '#229ED9');
 
 -- 3. USUARIOS (Agentes del Sistema AtyÑe'ẽ) — contraseña de prueba de todos: admin123
 INSERT INTO usuarios (nombre_completo, email, password_hash, rol_id, estado, avatar_url) VALUES

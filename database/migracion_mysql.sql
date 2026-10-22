@@ -60,3 +60,7 @@ DROP TABLE IF EXISTS metricas_diarias;
 --    (MySQL 8 no acepta ADD COLUMN IF NOT EXISTS; si ya existen las columnas, da error y no cambia nada).
 ALTER TABLE usuarios ADD COLUMN intentos_fallidos INT DEFAULT 0 AFTER ultimo_acceso;
 ALTER TABLE usuarios ADD COLUMN bloqueado_hasta DATETIME AFTER intentos_fallidos;
+
+-- 8. Canal Telegram. Si ya corriste los pasos anteriores, ejecutá solo este bloque, una vez.
+ALTER TABLE clientes ADD COLUMN telegram_chat_id VARCHAR(30) UNIQUE AFTER notas;
+INSERT INTO canales (nombre, codigo, icono, color) VALUES ('Telegram', 'TELEGRAM', 'ph-telegram-logo', '#229ED9');

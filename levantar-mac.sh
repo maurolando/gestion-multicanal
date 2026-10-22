@@ -25,6 +25,9 @@ for opcion in "$@"; do
   esac
 done
 mysql_cli() { "$MY/bin/mysql" --socket="$SOCKET" -uroot "$@"; }
+# Telegram (opcional): token en TELEGRAM_BOT_TOKEN o en el archivo ~/.atynere-telegram-token (fuera del proyecto,
+# porque el servidor web publica toda la carpeta).
+export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-$(cat ~/.atynere-telegram-token 2>/dev/null)}"
 
 mkdir -p "$ENTORNO"
 
@@ -71,6 +74,7 @@ detener() {
   echo
   echo "Apagando..."
   kill "$PHP_PID" 2>/dev/null || true
+  if [ -n "$TG_PID" ]; then pkill -P "$TG_PID"; kill "$TG_PID"; fi 2>/dev/null || true
   "$MY/bin/mysqladmin" --socket="$SOCKET" -uroot shutdown 2>/dev/null || true
   exit 0
 }
@@ -81,6 +85,17 @@ DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=atynere DB_PASSWORD= "$PHP" -S 127.0.0.1:
 PHP_PID=$!
 until curl -s localhost:8000/api/status >/dev/null; do sleep 1; done
 
+# 6. Receptor de Telegram (solo con token). Se reinicia solo si se cae, salvo token inválido (sale con 2).
+#    openssl.cafile: el PHP estático no encuentra solo los certificados de macOS para entrar a api.telegram.org.
+TG_PID=
+if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
+  (while true; do
+     DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=atynere DB_PASSWORD= "$PHP" -d openssl.cafile=/etc/ssl/cert.pem api/telegram-polling.php
+     [ $? = 2 ] && break; sleep 5
+   done) >>"$ENTORNO/telegram.log" 2>&1 &
+  TG_PID=$!
+fi
+
 echo
 echo "Listo: http://localhost:8000"
 echo "Usuarios de prueba (contraseña admin123):"
@@ -88,5 +103,6 @@ echo "  daiana.villasanti@atynere.py  (Administradora)"
 echo "  angel.heimann@atynere.py      (Supervisor)"
 echo "  blas.sosa@atynere.py          (Agente)"
 echo "Para apagar: Ctrl+C o cerrar esta ventana."
+[ -z "$TG_PID" ] || echo "Telegram: receptor iniciado; si el token falla lo dice en $ENTORNO/telegram.log"
 [ "$NAVEGADOR" = 0 ] || open http://localhost:8000
 wait "$PHP_PID"
