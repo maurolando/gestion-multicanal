@@ -686,6 +686,23 @@ td {
 
 
 
+/* Ojo para mostrar u ocultar la contraseña (lo agrega agregarOjos() en app.js) */
+.campo-clave { position: relative; display: block; }
+.campo-clave input { padding-right: 44px; }
+.ojo-clave {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; padding: 6px; line-height: 0;
+    color: var(--text-muted); font-size: 1.15rem; border-radius: var(--radius-md);
+}
+.ojo-clave:hover, .ojo-clave:focus-visible { color: var(--primary-main); }
+
+/* Barra de la vista Generar PDF: siempre a la vista, para volver o imprimir sin bajar hasta el final de la hoja */
+.pdf-barra {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px; background: white; box-shadow: var(--shadow-md, 0 2px 8px rgba(0,0,0,.12));
+}
+
 /* Generar PDF: al imprimir queda solo la hoja, sin fondo gris ni botones */
 @media print {
     @page { size: A4; margin: 0; }

@@ -794,6 +794,10 @@ const views = {
                     </table>` : `<p style="color: var(--text-muted);">${vacio}</p>`}
                 </div>`;
         return `
+        <div class="pdf-barra no-print">
+            <button class="btn" onclick="navigateTo('reportes')" style="border: 1px solid var(--border-color);"><i class="ph ph-arrow-left"></i> Volver a Reportes</button>
+            <button class="btn btn-primary" onclick="imprimirReporte()" ${r ? '' : 'disabled'}><i class="ph ph-printer"></i> Imprimir / Guardar PDF</button>
+        </div>
         <div class="pdf-fondo" style="background: #e5e5e5; padding: 40px; min-height: 100vh; display: flex; justify-content: center;">
             <div class="pdf-hoja" style="background: white; width: 210mm; min-height: 297mm; padding: 20mm; box-shadow: var(--shadow-lg); position: relative;">
                 
@@ -834,11 +838,6 @@ const views = {
                     : `sin encuestas respondidas en el período${k.encuestas_enviadas ? ` (${k.encuestas_enviadas} enviadas)` : ''}`}.</p>
                 <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">CSAT: % de clientes que calificaron la atención con 4 o 5. NPS: % que nos recomendaría (9-10) menos % que no (0-6).</p>
                 ` : `<p style="color: var(--text-muted);">${window.apiService.isOnline ? 'Cargando datos...' : 'Sin conexión a la API: no hay datos para el reporte.'}</p>`}
-                
-                <div class="no-print" style="text-align: center; margin-top: 60px;">
-                    <button class="btn btn-primary" onclick="imprimirReporte()" style="margin-right: 16px;" ${r ? '' : 'disabled'}><i class="ph ph-printer"></i> Imprimir / Guardar PDF</button>
-                    <button class="btn" onclick="navigateTo('reportes')" style="border: 1px solid var(--border-color);">Volver</button>
-                </div>
             </div>
         </div>
     `;
@@ -1287,10 +1286,10 @@ const layout = (content) => `
                     <input type="text" id="input-search-global" value="${state.searchQueryGlobal || ''}" oninput="filtrarGlobal(this.value)" placeholder="Buscar clientes, consultas...">
                 </div>
                 <div class="topbar-actions">
-                    <button class="icon-btn">
+                    ${(n => `<button class="icon-btn" onclick="navigateTo('consultas')" title="Consultas abiertas asignadas a vos" aria-label="${n ? n + (n === 1 ? ' consulta abierta asignada' : ' consultas abiertas asignadas') + ' a vos' : 'Sin consultas abiertas asignadas a vos'}">
                         <i class="ph ph-bell"></i>
-                        <span class="badge">3</span>
-                    </button>
+                        ${n ? `<span class="badge">${n}</span>` : ''}
+                    </button>`)(misConsultasAbiertas())}
                     <div class="user-profile">
                         <div class="avatar">${esc((state.user?.nombre_completo || '?').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase())}</div>
                         <div class="user-info">
@@ -1658,7 +1657,7 @@ function esc(valor) {
     return String(valor ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
-function showToast(message) {
+function showToast(message, ms = 3000) {
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.innerHTML = `<i class="ph ph-check-circle"></i> ${esc(message)}`;
@@ -1666,7 +1665,7 @@ function showToast(message) {
     setTimeout(() => {
         toast.style.animation = 'slideInUp 0.3s ease reverse forwards';
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, ms);
 }
 
 window.modals = {
@@ -1728,6 +1727,13 @@ window.modals = {
             }
             consulta.usuarioId = usuarioId;
             consulta.agente = usuarios.find(u => u.id === usuarioId).nombre_completo;
+            if (usuarioId === state.user.id) { // asignársela a uno mismo no merece el aviso de "te asignaron"
+                const clave = 'atynere_asignadas_' + state.user.id;
+                try {
+                    const conocidas = JSON.parse(localStorage.getItem(clave)) || [];
+                    localStorage.setItem(clave, JSON.stringify([...conocidas, consulta.dbId]));
+                } catch (e) {}
+            }
             showToast('Consulta #' + consulta.id + ' asignada a ' + consulta.agente + '.');
             render();
         });
@@ -2754,20 +2760,73 @@ if (state.currentView === 'dashboard') cargarDashboard();
 if (state.user) syncWithBackendIfAvailable();
 else window.apiService.checkHealth(); // saber si hay API antes del login (si no, se entra en modo demo)
 
-// Lo que entra por Telegram aparece sin recargar: cada 15 s se mira si cambió la lista de consultas
-// (nuevas, mensajes o estados) y, si cambió, se vuelve a sincronizar. Solo en Dashboard y Consultas, y nunca
-// mientras se escribe o hay una ventana abierta, porque render() borraría lo escrito.
+// Ojo para ver la contraseña: se agrega solo a cada campo de contraseña que aparezca (login, modales, usuarios)
+function agregarOjos() {
+    document.querySelectorAll('input[type="password"]:not([data-ojo])').forEach(input => {
+        input.dataset.ojo = '1';
+        const caja = document.createElement('span');
+        caja.className = 'campo-clave';
+        input.replaceWith(caja);
+        caja.appendChild(input);
+        const ojo = document.createElement('button');
+        ojo.type = 'button'; // dentro de un form, que no lo envíe
+        ojo.className = 'ojo-clave';
+        ojo.setAttribute('aria-label', 'Mostrar contraseña');
+        ojo.setAttribute('aria-pressed', 'false');
+        ojo.innerHTML = '<i class="ph ph-eye"></i>';
+        ojo.onclick = () => {
+            const ver = input.type === 'password';
+            input.type = ver ? 'text' : 'password';
+            ojo.setAttribute('aria-label', ver ? 'Ocultar contraseña' : 'Mostrar contraseña');
+            ojo.setAttribute('aria-pressed', String(ver));
+            ojo.innerHTML = `<i class="ph ${ver ? 'ph-eye-slash' : 'ph-eye'}"></i>`;
+            input.focus();
+        };
+        caja.appendChild(ojo);
+    });
+}
+new MutationObserver(agregarOjos).observe(document.body, { childList: true, subtree: true });
+agregarOjos();
+
+// Lo que entra por Telegram y las asignaciones aparecen sin recargar: cada 15 s se trae la lista de consultas,
+// se avisa si te asignaron alguna y, si cambió algo (nuevas, mensajes, estados, responsables), se vuelve a sincronizar.
+const ESTADOS_CERRADOS = ['Resuelto', 'Cerrado', 'Cancelado'];
+function misConsultasAbiertas() {
+    if (!state.user || !state.user.id) return 0;
+    return state.consultas.filter(c => c.usuarioId === state.user.id && !ESTADOS_CERRADOS.includes(c.estado)).length;
+}
+
+// Aviso de asignación: compara las consultas abiertas asignadas a este usuario con las que ya conocía.
+// Las conocidas se guardan en el navegador, así el aviso aparece también al volver a entrar.
+function revisarAsignaciones(lista) {
+    const clave = 'atynere_asignadas_' + state.user.id;
+    const mias = lista.filter(c => c.usuario_id === state.user.id && !ESTADOS_CERRADOS.includes(c.estado));
+    let conocidas = null;
+    try { conocidas = JSON.parse(localStorage.getItem(clave)); } catch (e) {}
+    if (Array.isArray(conocidas)) { // la primera vez en este navegador solo se anotan, sin avisar
+        const nuevas = mias.filter(c => !conocidas.includes(c.id));
+        if (nuevas.length === 1) {
+            showToast(`Te asignaron la consulta ${nuevas[0].codigo_ticket}: ${nuevas[0].asunto}`, 8000);
+        } else if (nuevas.length > 1) {
+            showToast(`Te asignaron ${nuevas.length} consultas nuevas: ${nuevas.map(c => c.codigo_ticket).join(', ')}`, 8000);
+        }
+    }
+    try { localStorage.setItem(clave, JSON.stringify(mias.map(c => c.id))); } catch (e) {}
+}
+
 let firmaConsultas = null;
 setInterval(async () => {
-    if (!state.user || !window.apiService.isOnline || document.hidden) return;
+    if (!state.user || !state.user.id || !window.apiService.isOnline || document.hidden) return;
+    const lista = await window.apiService.fetchConsultas();
+    if (!lista) return;
+    revisarAsignaciones(lista); // en cualquier pantalla
+    // Volver a dibujar solo en Dashboard y Consultas, y nunca mientras se escribe o hay una ventana abierta
     if (!['dashboard', 'consultas'].includes(state.currentView)) return;
     const activo = document.activeElement;
     const escribiendo = activo && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activo.tagName);
     const respuesta = document.getElementById('responder-input-txt');
     if (escribiendo || (respuesta && respuesta.value.trim()) || document.getElementById('modal-overlay')) return;
-    const lista = await window.apiService.fetchConsultas();
-    if (!lista) return;
-    const firma = lista.map(c => `${c.id}:${c.total_mensajes}:${c.estado}`).join(',');
+    const firma = lista.map(c => `${c.id}:${c.total_mensajes}:${c.estado}:${c.usuario_id}`).join(',');
     if (firmaConsultas !== null && firma !== firmaConsultas) {
         await syncWithBackendIfAvailable();
         if (state.currentView === 'dashboard') cargarDashboard();
