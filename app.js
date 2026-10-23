@@ -302,9 +302,6 @@ const views = {
                     ${puede('eliminar') ? `<button class="btn-adm btn-adm-delete" onclick="confirmarEliminarCliente()" title="Eliminar cliente seleccionado">
                         <i class="ph ph-trash" style="font-size:1.1rem;"></i> Eliminar
                     </button>` : ''}
-                    <button class="btn-adm" onclick="cancelarClienteAccion()" title="Cancelar operación">
-                        <i class="ph ph-x-circle" style="font-size:1.1rem;"></i> Cancelar
-                    </button>
                     <button class="btn-adm" onclick="salirClienteAccion()" title="Salir al Dashboard">
                         <i class="ph ph-sign-out" style="font-size:1.1rem;"></i> Salir
                     </button>
@@ -2320,10 +2317,6 @@ function confirmarEliminarCliente() {
         showToast('Cliente #' + idEliminado + ' eliminado permanentemente.');
         render();
     });
-}
-
-function cancelarClienteAccion() {
-    showToast('Operación cancelada.');
 }
 
 function salirClienteAccion() {
