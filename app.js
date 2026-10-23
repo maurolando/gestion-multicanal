@@ -1402,7 +1402,10 @@ function cargarScriptsSQL() {
     document.querySelectorAll('pre[data-archivo]').forEach(async pre => {
         try {
             const res = await fetch(pre.dataset.archivo);
-            pre.textContent = res.ok ? await res.text() : 'No se pudo cargar ' + pre.dataset.archivo + '.';
+            pre.textContent = res.ok ? await res.text()
+                : res.status === 404 && pre.dataset.archivo.endsWith('seed_data.sql')
+                    ? 'Los datos de prueba no se publican en la app en línea: traen los usuarios y contraseñas de prueba. Están en database/seed_data.sql del proyecto.'
+                    : 'No se pudo cargar ' + pre.dataset.archivo + '.';
         } catch (e) {
             pre.textContent = 'No se pudo cargar ' + pre.dataset.archivo + ' (abrí la app desde http://localhost:8000).';
         }

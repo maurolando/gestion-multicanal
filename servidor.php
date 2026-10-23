@@ -11,7 +11,9 @@ if ($ruta === '/api' || strpos($ruta, '/api/') === 0) {
     require __DIR__ . '/api/index.php';
     return true;
 }
-if (in_array($ruta, ['/', '/index.html', '/app.js', '/style.css', '/encuesta.html', '/manifest.json'], true)
+// Los dos esquemas se muestran en la pantalla Base de Datos SQL; seed_data.sql no (trae usuarios y contraseñas de prueba)
+if (in_array($ruta, ['/', '/index.html', '/app.js', '/style.css', '/encuesta.html', '/manifest.json',
+        '/database/schema_postgresql.sql', '/database/schema_mysql.sql'], true)
     || preg_match('#^/iconos/icono(-\d+)?\.(png|svg)$#', $ruta)) {
     return false; // el servidor de PHP entrega el archivo tal cual
 }
