@@ -85,7 +85,7 @@ try {
                 'api' => 'AtyÑe’ẽ REST API',
                 'version' => '1.0.0',
                 'status' => 'online',
-                'database' => 'connected',
+                'commit' => substr(getenv('RENDER_GIT_COMMIT') ?: 'local', 0, 7), // qué versión está publicada en Render
                 'system_time' => date('Y-m-d H:i:s')
             ], 'API AtyÑe’ẽ activa y operativa');
             break;
