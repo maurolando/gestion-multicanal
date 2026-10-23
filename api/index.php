@@ -7,6 +7,12 @@
 // Paraguay usa UTC-3 fijo desde 2024; las fechas se guardan y muestran en hora local.
 date_default_timezone_set('America/Asuncion');
 
+// En la nube (Render) el HTTPS termina en el proxy: la app recibe http y el proxy avisa con esta cabecera.
+// Hace falta para que la cookie de sesión salga con Secure y el enlace de la encuesta con https.
+if (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') {
+    $_SERVER['HTTPS'] = 'on';
+}
+
 // 1. Cargar Cabeceras CORS
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/helpers/Response.php';
@@ -47,7 +53,7 @@ if (!empty($_GET['route'])) {
 // 5. Tabla de Enrutamiento RESTful
 try {
     // Todo exige sesión salvo el estado de la API, el login y la encuesta que responde el cliente
-    if (!in_array($route, ['', 'status', 'health', 'auth/login', 'encuesta'], true)) {
+    if (!in_array($route, ['', 'status', 'health', 'auth/login', 'encuesta', 'telegram/webhook'], true)) {
         Auth::usuarioId();
     }
 
@@ -96,6 +102,12 @@ try {
                 EncuestasController::mostrar();
             } elseif ($method === 'POST') {
                 EncuestasController::responder();
+            }
+            break;
+
+        case 'telegram/webhook':
+            if ($method === 'POST') {
+                TelegramController::webhook();
             }
             break;
 

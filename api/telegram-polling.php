@@ -1,7 +1,8 @@
 <?php
 /**
  * Recibe los mensajes del bot de Telegram preguntándole a Telegram (long polling).
- * Así no hace falta una dirección pública con HTTPS: anda en una notebook igual que en un servidor.
+ * Así no hace falta una dirección pública con HTTPS: anda en una notebook. En la nube se usa el webhook
+ * (POST /api/telegram/webhook) y este receptor no corre; si el bot tiene webhook, termina sin tocarlo.
  * Lo arrancan levantar.sh y levantar-mac.sh cuando hay token. A mano:
  *   TELEGRAM_BOT_TOKEN=... DB_HOST=127.0.0.1 DB_PASSWORD=root php api/telegram-polling.php
  * Si algo falla, termina con error y el script que lo lanzó lo vuelve a arrancar (así también reconecta la base).
@@ -17,8 +18,6 @@ if (!getenv('TELEGRAM_BOT_TOKEN')) {
     exit(2); // 2 = problema de token: levantar.sh no lo reintenta
 }
 
-// getUpdates no funciona si el bot tiene un webhook puesto
-TelegramController::llamar('deleteWebhook', []);
 echo "Telegram: escuchando mensajes del bot\n";
 
 $offset = 0;
@@ -28,6 +27,11 @@ while (true) {
     if (empty($res['ok'])) {
         fwrite(STDERR, 'Telegram: ' . ($res['description'] ?? 'sin respuesta') . "\n");
         if (($res['error_code'] ?? 0) === 401) exit(2); // token inválido: no tiene sentido reintentar
+        // 409: el bot tiene webhook, o sea que lo atiende la app en la nube. No se le quita: esta copia no escucha.
+        if (($res['error_code'] ?? 0) === 409 && stripos($res['description'] ?? '', 'webhook') !== false) {
+            fwrite(STDERR, "Telegram: el bot lo atiende la app en la nube (webhook); esta copia no recibe mensajes\n");
+            exit(2);
+        }
         sleep(5);
         continue;
     }

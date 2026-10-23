@@ -1,0 +1,25 @@
+# Blueprint de Render (plan gratis). Las variables con sync: false se cargan a mano en el panel.
+services:
+  - type: web
+    name: atynere
+    runtime: docker
+    plan: free
+    region: virginia # la más cercana a Paraguay; la base de Supabase conviene en us-east-1, al lado
+    healthCheckPath: /api/status
+    envVars:
+      - key: DB_DRIVER
+        value: pgsql
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: postgres
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        generateValue: true

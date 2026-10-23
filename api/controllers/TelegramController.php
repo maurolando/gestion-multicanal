@@ -3,10 +3,12 @@
  * Canal Telegram - AtyÑe'ẽ
  * Lo que un cliente le escribe al bot entra como consulta (o como mensaje de su consulta abierta),
  * y lo que el agente responde en la app le llega al cliente por Telegram.
- * Los mensajes se reciben con api/telegram-polling.php; el token sale de la variable TELEGRAM_BOT_TOKEN.
+ * Los mensajes se reciben de dos formas: en una máquina local, con api/telegram-polling.php; en la nube, con
+ * el webhook (Telegram llama a POST /api/telegram/webhook). El token sale de la variable TELEGRAM_BOT_TOKEN.
  */
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../helpers/Response.php';
 require_once __DIR__ . '/ConsultasController.php';
 
 class TelegramController {
@@ -52,6 +54,21 @@ class TelegramController {
         ");
         $stmt->execute([':id' => $consultaId]);
         return $stmt->fetchColumn() ?: null;
+    }
+
+    /**
+     * POST /api/telegram/webhook — Telegram avisa cada mensaje nuevo.
+     * Telegram manda en una cabecera el secreto que se le dio al registrar el webhook; sin él, cualquiera
+     * podría inventar consultas. Si algo falla responde 500 y Telegram vuelve a intentar más tarde.
+     */
+    public static function webhook() {
+        $secreto = getenv('TELEGRAM_WEBHOOK_SECRET');
+        $recibido = $_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'] ?? '';
+        if (!$secreto || !hash_equals($secreto, $recibido)) {
+            Response::error('No autorizado', 401);
+        }
+        self::procesar(Response::getJsonBody());
+        Response::json(null, 'ok');
     }
 
     /**
