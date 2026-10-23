@@ -25,6 +25,14 @@ for opcion in "$@"; do
   esac
 done
 mysql_cli() { "$MY/bin/mysql" --socket="$SOCKET" -uroot "$@"; }
+
+# Si ya está abierta (otro doble clic, otra Terminal), no arrancar una segunda copia:
+# dos receptores de Telegram a la vez guardan cada mensaje dos veces.
+if curl -s localhost:8000/api/status >/dev/null; then
+  echo "AtyÑe'ẽ ya está abierta en http://localhost:8000"
+  [ "$NAVEGADOR" = 0 ] || open http://localhost:8000
+  exit 0
+fi
 # Telegram (opcional): token en TELEGRAM_BOT_TOKEN o en el archivo ~/.atynere-telegram-token (fuera del proyecto,
 # porque el servidor web publica toda la carpeta).
 export TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-$(cat ~/.atynere-telegram-token 2>/dev/null)}"
