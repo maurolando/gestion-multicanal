@@ -2440,6 +2440,8 @@ window.fetch = async (url, opciones) => {
     return res;
 };
 
+let versionInicial = null, versionPospuesta = null; // aviso de versión nueva (ver mostrarAvisoVersion)
+
 window.apiService = {
     baseUrl: (function() {
         if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
@@ -2457,6 +2459,7 @@ window.apiService = {
             if (res.ok) {
                 const json = await res.json();
                 this.isOnline = true;
+                versionInicial = versionInicial || json.data?.commit; // con qué versión se abrió la app
                 console.log('✅ Conectado a la API PHP AtyÑe’ẽ:', json);
                 return true;
             }
@@ -2808,6 +2811,40 @@ function agregarOjos() {
 }
 new MutationObserver(agregarOjos).observe(document.body, { childList: true, subtree: true });
 agregarOjos();
+
+// Aviso de versión nueva: cada minuto se compara el commit publicado (/api/status) con el que se abrió la app.
+// Es un cuadro que no bloquea la pantalla; "Más tarde" lo esconde hasta la versión siguiente.
+setInterval(async () => {
+    if (!versionInicial || document.hidden || document.getElementById('aviso-version')) return;
+    try {
+        const json = await (await fetch(`${window.apiService.baseUrl}/status`, { cache: 'no-store' })).json();
+        const publicada = json.data?.commit;
+        if (publicada && publicada !== versionInicial && publicada !== versionPospuesta) mostrarAvisoVersion(publicada);
+    } catch (e) {} // sin conexión: se vuelve a probar al minuto siguiente
+}, 60000);
+
+function mostrarAvisoVersion(publicada) {
+    const aviso = document.createElement('div');
+    aviso.id = 'aviso-version';
+    aviso.className = 'aviso-version';
+    aviso.setAttribute('role', 'alertdialog');
+    aviso.setAttribute('aria-labelledby', 'aviso-version-titulo');
+    aviso.innerHTML = `
+        <div id="aviso-version-titulo" style="font-weight: 700; margin-bottom: 4px;"><i class="ph ph-sparkle"></i> Hay una nueva versión de AtyÑe’ẽ</div>
+        <div style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 12px;">Actualizá para ver los últimos cambios. Tarda unos segundos.</div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button class="btn" style="border: 1px solid var(--border-color);" id="aviso-version-luego">Más tarde</button>
+            <button class="btn btn-primary" id="aviso-version-ok"><i class="ph ph-arrow-clockwise"></i> Actualizar</button>
+        </div>`;
+    document.body.appendChild(aviso);
+    aviso.querySelector('#aviso-version-luego').onclick = () => { versionPospuesta = publicada; aviso.remove(); };
+    aviso.querySelector('#aviso-version-ok').onclick = () => {
+        const respuesta = document.getElementById('responder-input-txt');
+        if (respuesta && respuesta.value.trim() && !confirm('Tenés una respuesta sin enviar. Si actualizás ahora se pierde. ¿Actualizar igual?')) return;
+        location.reload();
+    };
+    aviso.querySelector('#aviso-version-ok').focus();
+}
 
 // Calificación de 1 a 5 en estrellas; el lector de pantalla lee el número
 function estrellas(n) {

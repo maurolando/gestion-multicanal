@@ -686,6 +686,13 @@ td {
 
 
 
+/* Aviso de versión nueva (abajo a la derecha, encima de los avisos emergentes) */
+.aviso-version {
+    position: fixed; right: 16px; bottom: 80px; z-index: 1000; width: min(360px, calc(100vw - 32px));
+    background: white; border: 1px solid var(--border-color); border-left: 4px solid var(--accent-lime);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 16px;
+}
+
 /* Encuesta de satisfacción: en la consulta y en Reportes */
 .encuesta-caso { background: #f6f1fc; border: 1px solid #d9c8f0; padding: 16px; border-radius: 12px; }
 .encuesta-comentario { margin-top: 8px; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; font-style: italic; }
