@@ -77,6 +77,10 @@ Publicada el 22/10 en **https://atynere.onrender.com**, con una copia de la base
 
 **Bases creadas antes del 22/10:** correr el paso 8 de `database/migracion_mysql.sql`. En PostgreSQL: `ALTER TABLE clientes ADD COLUMN telegram_chat_id VARCHAR(30) UNIQUE; INSERT INTO canales (nombre, codigo, icono, color) VALUES ('Telegram', 'TELEGRAM', 'ph-telegram-logo', '#229ED9');`. La base local de esta máquina ya se migró el 22/10.
 
+**Campanita (23/10):** las notificaciones salen del historial (asignaciones que te hizo otra persona) y lo leído se guarda en `usuarios.notif_leidas_hasta`. Bases anteriores: paso 9 de `migracion_mysql.sql`; en PostgreSQL `ALTER TABLE usuarios ADD COLUMN notif_leidas_hasta INT DEFAULT 0;`. Ya aplicado en Supabase y en la base local de Mauro.
+
+**Ícono y acceso directo:** `iconos/` (SVG y PNG) y `manifest.json`. En Safari de Mac: Archivo → Agregar al Dock; en Chrome/Edge: Instalar app; en el celular: Agregar a inicio.
+
 ## Notas para quien siga
 
 - **Fechas viejas en UTC:** la base local se corrigió el 20/10 restando 3 h. Otra base creada antes de ese día tiene las fechas 3 h adelantadas; se corrige igual (`UPDATE tabla SET col = col - INTERVAL 3 HOUR` en cada columna DATETIME) o recreándola.

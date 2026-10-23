@@ -480,9 +480,6 @@ const views = {
                     ${puede('eliminar') ? `<button class="btn-adm btn-adm-delete" onclick="confirmarEliminarConsulta()" title="Eliminar consulta seleccionada">
                         <i class="ph ph-trash" style="font-size:1.1rem;"></i> Eliminar
                     </button>` : ''}
-                    <button class="btn-adm" onclick="cancelarConsultaAccion()" title="Cancelar operación">
-                        <i class="ph ph-x-circle" style="font-size:1.1rem;"></i> Cancelar
-                    </button>
                     <button class="btn-adm" onclick="salirConsultaAccion()" title="Salir al Dashboard">
                         <i class="ph ph-sign-out" style="font-size:1.1rem;"></i> Salir
                     </button>
@@ -1286,10 +1283,7 @@ const layout = (content) => `
                     <input type="text" id="input-search-global" value="${state.searchQueryGlobal || ''}" oninput="filtrarGlobal(this.value)" placeholder="Buscar clientes, consultas...">
                 </div>
                 <div class="topbar-actions">
-                    ${(n => `<button class="icon-btn" onclick="navigateTo('consultas')" title="Consultas abiertas asignadas a vos" aria-label="${n ? n + (n === 1 ? ' consulta abierta asignada' : ' consultas abiertas asignadas') + ' a vos' : 'Sin consultas abiertas asignadas a vos'}">
-                        <i class="ph ph-bell"></i>
-                        ${n ? `<span class="badge">${n}</span>` : ''}
-                    </button>`)(misConsultasAbiertas())}
+                    ${campanaHTML()}
                     <div class="user-profile">
                         <div class="avatar">${esc((state.user?.nombre_completo || '?').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase())}</div>
                         <div class="user-info">
@@ -1520,6 +1514,8 @@ window.iniciarSesion = async function() {
 window.cerrarSesion = function() {
     if (state.user && state.user.id) window.apiService.logout();
     state.user = null;
+    state.notificaciones = null;
+    state.notifAbierto = false;
     try { sessionStorage.removeItem('atynere_user'); } catch (e) {}
     navigateTo('login');
 };
@@ -1727,13 +1723,6 @@ window.modals = {
             }
             consulta.usuarioId = usuarioId;
             consulta.agente = usuarios.find(u => u.id === usuarioId).nombre_completo;
-            if (usuarioId === state.user.id) { // asignársela a uno mismo no merece el aviso de "te asignaron"
-                const clave = 'atynere_asignadas_' + state.user.id;
-                try {
-                    const conocidas = JSON.parse(localStorage.getItem(clave)) || [];
-                    localStorage.setItem(clave, JSON.stringify([...conocidas, consulta.dbId]));
-                } catch (e) {}
-            }
             showToast('Consulta #' + consulta.id + ' asignada a ' + consulta.agente + '.');
             render();
         });
@@ -2118,10 +2107,6 @@ function confirmarEliminarConsulta() {
         showToast('Consulta #' + idEliminado + ' eliminada permanentemente.');
         render();
     });
-}
-
-function cancelarConsultaAccion() {
-    showToast('Operación cancelada.');
 }
 
 function salirConsultaAccion() {
@@ -2629,6 +2614,19 @@ window.apiService = {
         } catch (e) { return null; }
     },
 
+    async fetchNotificaciones() {
+        if (!this.isOnline) return null;
+        try {
+            const res = await fetch(`${this.baseUrl}/notificaciones`);
+            const data = await res.json();
+            return data.success ? data.data : null;
+        } catch (e) { return null; }
+    },
+
+    async marcarNotificacionesLeidas() {
+        try { await fetch(`${this.baseUrl}/notificaciones/leidas`, { method: 'POST' }); } catch (e) {}
+    },
+
     // Eventos que solo conoce el navegador (exportación de PDF); si falla no se interrumpe al usuario
     async registrarEvento(accion, nota) {
         if (!this.isOnline || !state.user || !state.user.id) return;
@@ -2702,6 +2700,7 @@ async function syncWithBackendIfAvailable() {
     const isUp = await window.apiService.checkHealth();
     if (isUp) {
         cargarCanales(); // el formulario de Nueva Consulta ofrece los canales activos
+        cargarNotificaciones();
         const remoteClientes = await window.apiService.fetchClientes();
         if (remoteClientes && remoteClientes.length > 0) {
             state.clientes = remoteClientes.map(c => ({
@@ -2788,38 +2787,92 @@ function agregarOjos() {
 new MutationObserver(agregarOjos).observe(document.body, { childList: true, subtree: true });
 agregarOjos();
 
-// Lo que entra por Telegram y las asignaciones aparecen sin recargar: cada 15 s se trae la lista de consultas,
-// se avisa si te asignaron alguna y, si cambió algo (nuevas, mensajes, estados, responsables), se vuelve a sincronizar.
-const ESTADOS_CERRADOS = ['Resuelto', 'Cerrado', 'Cancelado'];
-function misConsultasAbiertas() {
-    if (!state.user || !state.user.id) return 0;
-    return state.consultas.filter(c => c.usuarioId === state.user.id && !ESTADOS_CERRADOS.includes(c.estado)).length;
+// Campanita: las consultas que otra persona te asignó (GET /api/notificaciones). Al abrirla se marcan leídas
+// en la base, así quedan leídas en cualquier computadora. Las nuevas aparecen también como aviso.
+function campanaHTML() {
+    const notif = state.notificaciones || { items: [], no_leidas: 0 };
+    const n = notif.no_leidas;
+    return `<div class="notif" id="notif">
+        <button class="icon-btn" onclick="alternarNotificaciones(event)" aria-haspopup="true" aria-expanded="${!!state.notifAbierto}"
+            title="Notificaciones" aria-label="Notificaciones${n ? ': ' + n + ' sin leer' : ''}">
+            <i class="ph ph-bell"></i>${n ? `<span class="badge">${n > 9 ? '9+' : n}</span>` : ''}
+        </button>
+        ${state.notifAbierto ? `<div class="notif-panel" role="region" aria-label="Notificaciones">
+            <div class="notif-titulo">Notificaciones</div>
+            ${notif.items.length ? notif.items.map(i => `
+                <button class="notif-item${i.leida ? '' : ' no-leida'}" data-codigo="${esc(i.codigo_ticket)}" onclick="abrirNotificacion(this.dataset.codigo)">
+                    <span><strong>${esc(i.quien)}</strong> te asignó la consulta <strong>${esc(i.codigo_ticket)}</strong>: ${esc(i.asunto)}</span>
+                    <small>${esc(i.hace)}</small>
+                </button>`).join('') : '<p class="notif-vacio">No tenés notificaciones.</p>'}
+        </div>` : ''}
+    </div>`;
 }
 
-// Aviso de asignación: compara las consultas abiertas asignadas a este usuario con las que ya conocía.
-// Las conocidas se guardan en el navegador, así el aviso aparece también al volver a entrar.
-function revisarAsignaciones(lista) {
-    const clave = 'atynere_asignadas_' + state.user.id;
-    const mias = lista.filter(c => c.usuario_id === state.user.id && !ESTADOS_CERRADOS.includes(c.estado));
-    let conocidas = null;
-    try { conocidas = JSON.parse(localStorage.getItem(clave)); } catch (e) {}
-    if (Array.isArray(conocidas)) { // la primera vez en este navegador solo se anotan, sin avisar
-        const nuevas = mias.filter(c => !conocidas.includes(c.id));
+// Redibuja solo la campanita, para no borrar lo que se esté escribiendo en otra parte de la pantalla
+function pintarCampana() {
+    const el = document.getElementById('notif');
+    if (el) el.outerHTML = campanaHTML();
+}
+
+window.alternarNotificaciones = function(ev) {
+    ev.stopPropagation();
+    state.notifAbierto = !state.notifAbierto;
+    pintarCampana();
+    if (state.notifAbierto && state.notificaciones && state.notificaciones.no_leidas) {
+        window.apiService.marcarNotificacionesLeidas();
+        state.notificaciones.no_leidas = 0; // las resaltadas siguen así hasta cerrar, para ver cuáles eran nuevas
+        pintarCampana();
+    }
+};
+
+window.abrirNotificacion = async function(codigo) {
+    state.notifAbierto = false;
+    navigateTo('consultas');
+    if (!state.consultas.some(c => c.id === codigo)) await syncWithBackendIfAvailable(); // recién asignada: traerla
+    if (state.consultas.some(c => c.id === codigo)) seleccionarConsulta(codigo);
+};
+
+document.addEventListener('click', e => {
+    if (state.notifAbierto && !e.target.closest('#notif')) { state.notifAbierto = false; pintarCampana(); }
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && state.notifAbierto) {
+        state.notifAbierto = false;
+        pintarCampana();
+        document.querySelector('#notif .icon-btn')?.focus();
+    }
+});
+
+async function cargarNotificaciones() {
+    if (!state.user || !state.user.id) return;
+    const datos = await window.apiService.fetchNotificaciones();
+    if (!datos) return;
+    if (state.notifDe !== state.user.id) { // otro usuario en esta pestaña: lo de antes no cuenta
+        state.notifDe = state.user.id;
+        state.notifUltima = null;
+    }
+    const maxId = datos.items.length ? datos.items[0].id : 0;
+    if (state.notifUltima !== null) { // la primera carga solo anota; las no leídas ya se ven en la campanita
+        const nuevas = datos.items.filter(i => i.id > state.notifUltima && !i.leida);
         if (nuevas.length === 1) {
-            showToast(`Te asignaron la consulta ${nuevas[0].codigo_ticket}: ${nuevas[0].asunto}`, 8000);
+            showToast(`${nuevas[0].quien} te asignó la consulta ${nuevas[0].codigo_ticket}: ${nuevas[0].asunto}`, 8000);
         } else if (nuevas.length > 1) {
-            showToast(`Te asignaron ${nuevas.length} consultas nuevas: ${nuevas.map(c => c.codigo_ticket).join(', ')}`, 8000);
+            showToast(`Te asignaron ${nuevas.length} consultas: ${nuevas.map(i => i.codigo_ticket).join(', ')}`, 8000);
         }
     }
-    try { localStorage.setItem(clave, JSON.stringify(mias.map(c => c.id))); } catch (e) {}
+    state.notifUltima = Math.max(maxId, state.notifUltima || 0);
+    state.notificaciones = datos;
+    pintarCampana();
 }
 
+// Lo que entra por Telegram y las asignaciones aparecen sin recargar: cada 15 s se miran las notificaciones
+// y la lista de consultas; si cambió algo (nuevas, mensajes, estados, responsables), se vuelve a sincronizar.
 let firmaConsultas = null;
 setInterval(async () => {
     if (!state.user || !state.user.id || !window.apiService.isOnline || document.hidden) return;
+    await cargarNotificaciones(); // en cualquier pantalla
     const lista = await window.apiService.fetchConsultas();
     if (!lista) return;
-    revisarAsignaciones(lista); // en cualquier pantalla
     // Volver a dibujar solo en Dashboard y Consultas, y nunca mientras se escribe o hay una ventana abierta
     if (!['dashboard', 'consultas'].includes(state.currentView)) return;
     const activo = document.activeElement;

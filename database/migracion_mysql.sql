@@ -64,3 +64,6 @@ ALTER TABLE usuarios ADD COLUMN bloqueado_hasta DATETIME AFTER intentos_fallidos
 -- 8. Canal Telegram. Si ya corriste los pasos anteriores, ejecutá solo este bloque, una vez.
 ALTER TABLE clientes ADD COLUMN telegram_chat_id VARCHAR(30) UNIQUE AFTER notas;
 INSERT INTO canales (nombre, codigo, icono, color) VALUES ('Telegram', 'TELEGRAM', 'ph-telegram-logo', '#229ED9');
+
+-- 9. Notificaciones de la campanita (qué leyó cada usuario). Si ya corriste los pasos anteriores, ejecutá solo esta línea, una vez.
+ALTER TABLE usuarios ADD COLUMN notif_leidas_hasta INT DEFAULT 0 AFTER bloqueado_hasta;

@@ -459,6 +459,53 @@ class ConsultasController {
     }
 
     /**
+     * GET /api/notificaciones — las últimas consultas que otra persona le asignó al usuario.
+     * Salen del historial (RF-50); "no leídas" son las posteriores a usuarios.notif_leidas_hasta.
+     */
+    public static function notificaciones() {
+        $yo = Auth::usuarioId();
+        $db = Database::getConnection();
+        $leidasHasta = $db->prepare("SELECT notif_leidas_hasta FROM usuarios WHERE id = :yo");
+        $leidasHasta->execute([':yo' => $yo]);
+        $leidasHasta = (int)$leidasHasta->fetchColumn();
+
+        $filtro = "h.accion = 'Asignación' AND h.usuario_asignado_id = :yo AND h.usuario_id <> :yo2";
+        $stmt = $db->prepare("
+            SELECT h.id, h.consulta_id, h.codigo_ticket, co.asunto, u.nombre_completo AS quien, h.cambiado_en
+            FROM historial_estado h
+            INNER JOIN consultas co ON co.id = h.consulta_id
+            LEFT JOIN usuarios u ON u.id = h.usuario_id
+            WHERE $filtro
+            ORDER BY h.id DESC LIMIT 20
+        ");
+        $stmt->execute([':yo' => $yo, ':yo2' => $yo]);
+        $items = array_map(fn($n) => [
+            'id' => (int)$n['id'],
+            'consulta_id' => (int)$n['consulta_id'],
+            'codigo_ticket' => $n['codigo_ticket'],
+            'asunto' => $n['asunto'],
+            'quien' => $n['quien'] ?: 'Alguien',
+            'hace' => ReportesController::tiempoTranscurrido($n['cambiado_en']),
+            'leida' => (int)$n['id'] <= $leidasHasta,
+        ], $stmt->fetchAll());
+
+        $noLeidas = $db->prepare("SELECT COUNT(*) FROM historial_estado h INNER JOIN consultas co ON co.id = h.consulta_id WHERE $filtro AND h.id > :hasta");
+        $noLeidas->execute([':yo' => $yo, ':yo2' => $yo, ':hasta' => $leidasHasta]);
+
+        Response::json(['items' => $items, 'no_leidas' => (int)$noLeidas->fetchColumn()], 'Notificaciones');
+    }
+
+    /**
+     * POST /api/notificaciones/leidas — marca como leídas todas las notificaciones hasta ahora.
+     */
+    public static function marcarNotificacionesLeidas() {
+        $db = Database::getConnection();
+        $db->prepare("UPDATE usuarios SET notif_leidas_hasta = (SELECT COALESCE(MAX(id), 0) FROM historial_estado) WHERE id = :yo")
+           ->execute([':yo' => Auth::usuarioId()]);
+        Response::json(null, 'Notificaciones leídas');
+    }
+
+    /**
      * Historial de cambios de todas las consultas (auditoría)
      * GET /api/historial
      */

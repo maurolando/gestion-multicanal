@@ -37,6 +37,7 @@ CREATE TABLE usuarios (
     ultimo_acceso TIMESTAMP WITH TIME ZONE,
     intentos_fallidos INT DEFAULT 0, -- logins fallidos seguidos (RF-10)
     bloqueado_hasta TIMESTAMP WITH TIME ZONE, -- tras 5 fallidos, bloqueo temporal (RNF)
+    notif_leidas_hasta INT DEFAULT 0, -- id de historial_estado hasta el que leyó sus notificaciones (campanita)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

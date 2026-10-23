@@ -183,6 +183,18 @@ try {
             }
             break;
 
+        case 'notificaciones':
+            if ($method === 'GET') {
+                ConsultasController::notificaciones();
+            }
+            break;
+
+        case 'notificaciones/leidas':
+            if ($method === 'POST') {
+                ConsultasController::marcarNotificacionesLeidas();
+            }
+            break;
+
         case 'historial':
             if ($method === 'GET') {
                 ConsultasController::historial();

@@ -205,7 +205,7 @@ class ReportesController {
         ], 'Analítica de reportes recuperada');
     }
 
-    private static function tiempoTranscurrido($fecha) {
+    public static function tiempoTranscurrido($fecha) {
         if (!$fecha) return 'Reciente';
         $timestamp = strtotime($fecha);
         $diff = time() - $timestamp;

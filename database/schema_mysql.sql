@@ -42,6 +42,7 @@ CREATE TABLE usuarios (
     ultimo_acceso DATETIME,
     intentos_fallidos INT DEFAULT 0, -- logins fallidos seguidos (RF-10)
     bloqueado_hasta DATETIME, -- tras 5 fallidos, bloqueo temporal (RNF)
+    notif_leidas_hasta INT DEFAULT 0, -- id de historial_estado hasta el que leyó sus notificaciones (campanita)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_usuarios_roles FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE RESTRICT

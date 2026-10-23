@@ -686,6 +686,27 @@ td {
 
 
 
+/* Campanita de notificaciones y su panel */
+.notif { position: relative; }
+.notif-panel {
+    position: absolute; right: 0; top: calc(100% + 10px); z-index: 50;
+    width: min(360px, calc(100vw - 32px)); max-height: 420px; overflow-y: auto;
+    background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg); padding: 8px;
+}
+.notif-titulo { font-weight: 700; padding: 8px 10px; color: var(--primary-dark); }
+.notif-item {
+    display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left;
+    padding: 10px; border: none; background: none; border-radius: var(--radius-md);
+    font: inherit; font-size: 0.88rem; line-height: 1.4; color: var(--text-main, #1a1a1a); cursor: pointer;
+}
+.notif-item small { color: var(--text-muted); font-size: 0.78rem; }
+.notif-item strong { white-space: nowrap; } /* que TCK-1001 no se corte en el guion */
+.notif-item:hover, .notif-item:focus-visible { background: #f3eefa; }
+.notif-item.no-leida { background: #f1fbd9; }
+.notif-item.no-leida:hover { background: #e6f7bf; }
+.notif-vacio { padding: 10px; color: var(--text-muted); font-size: 0.88rem; }
+
 /* Ojo para mostrar u ocultar la contraseña (lo agrega agregarOjos() en app.js) */
 .campo-clave { position: relative; display: block; }
 .campo-clave input { padding-right: 44px; }
