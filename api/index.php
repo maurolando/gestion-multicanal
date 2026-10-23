@@ -224,5 +224,7 @@ try {
     Response::error("Método {$method} no permitido para la ruta /api/{$route}", 405);
 
 } catch (Throwable $e) {
-    Response::error('Error interno del servidor: ' . $e->getMessage(), 500);
+    // El detalle va al registro del servidor (podman logs / logs de Render); la respuesta no muestra SQL ni rutas
+    error_log('API ' . $method . ' ' . $route . ': ' . $e->getMessage());
+    Response::error('Error interno del servidor', 500);
 }

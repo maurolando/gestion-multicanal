@@ -56,13 +56,13 @@ class Database {
                     ? "SET TIME ZONE '" . date_default_timezone_get() . "'"
                     : "SET time_zone = '" . date('P') . "'");
             } catch (PDOException $e) {
-                // En caso de fallo de conexión, retornar respuesta JSON limpia si es llamada API
+                // El detalle (servidor, usuario) va al registro del servidor, no a la respuesta: la app es pública
+                error_log('Base de datos: ' . $e->getMessage());
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code(500);
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Error al conectar con la base de datos',
-                    'error' => $e->getMessage()
+                    'message' => 'Error al conectar con la base de datos'
                 ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
                 exit;
             }
