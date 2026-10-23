@@ -60,7 +60,7 @@ Ya no quedan pendientes grandes; lo que sigue son mejoras menores.
 
 - **App:** Render despliega el `Dockerfile` desde GitHub (`render.yaml`). `servidor.php` publica solo la página, `app.js`, `style.css`, `encuesta.html` y la API; `PENDIENTES.md`, los `.sql` y los scripts dan 404.
 - **Base:** PostgreSQL de Supabase por el *session pooler* (puerto 5432, usuario `postgres.<ref>`). El *transaction pooler* (6543) no sirve: la app usa sentencias preparadas.
-- **Variables en Render:** `DB_DRIVER=pgsql`, `DB_HOST`, `DB_PORT=5432`, `DB_NAME=postgres`, `DB_USER`, `DB_PASSWORD`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` (la genera Render).
+- **Variables en Render:** `DB_DRIVER=pgsql`, `DB_HOST`, `DB_PORT=5432`, `DB_NAME=postgres`, `DB_USER`, `DB_PASSWORD`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` (la misma que se usa en `setWebhook`; copia local en `~/.atynere-telegram-webhook-secret`).
 - **Telegram en la nube:** por webhook (`POST /api/telegram/webhook`, protegido con `TELEGRAM_WEBHOOK_SECRET`), registrado una vez con `setWebhook` (url + `secret_token`). Mientras el bot tenga webhook, el receptor local (`levantar.sh`, `levantar-mac.sh`) avisa que lo atiende la nube y no se lo quita.
 - **Límites del plan gratis:** Render duerme la app a los 15 min sin uso; la primera visita tarda alrededor de un minuto, y el primer mensaje de Telegram después de dormir llega con ese retraso (Telegram reintenta solo). Al dormir se pierden las sesiones: hay que volver a entrar. Supabase pausa el proyecto tras ~7 días sin uso; se reactiva desde su panel.
 
