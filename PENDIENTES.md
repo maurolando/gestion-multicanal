@@ -62,7 +62,7 @@ Ya no quedan pendientes grandes; lo que sigue son mejoras menores.
 
 **Cómo funciona:** el cliente se reconoce por su chat (`clientes.telegram_chat_id`); la primera vez se crea con el nombre de su perfil de Telegram. Si tiene una consulta de Telegram sin cerrar, el mensaje se suma a esa; si no, se abre una nueva (asunto = el comienzo del mensaje, prioridad Media, sin asignar). Desactivar el canal Telegram en Canales hace que el bot conteste que no se está atendiendo por ahí. Código: `api/controllers/TelegramController.php`.
 
-**Límites:** solo texto (a fotos, audios o stickers el bot contesta que por ahora solo lee texto); solo chats privados con el bot, no grupos; un solo bot por instalación. No se probó todavía con un bot real: se probó la entrada simulando mensajes de Telegram y la salida con un token falso (la API devuelve 502 y el mensaje no se guarda). Con un hosting que no deje correr procesos de fondo haría falta un webhook en lugar del receptor.
+**Límites:** solo texto (a fotos, audios o stickers el bot contesta que por ahora solo lee texto); solo chats privados con el bot, no grupos; un solo bot por instalación. Probado el 22/10 con el bot real @atynere_bot: entra la consulta, la respuesta del agente le llega al cliente y la encuesta también. Con un token inválido la respuesta da 502 y no se guarda. Con un hosting que no deje correr procesos de fondo haría falta un webhook en lugar del receptor.
 
 **Bases creadas antes del 22/10:** correr el paso 8 de `database/migracion_mysql.sql`. En PostgreSQL: `ALTER TABLE clientes ADD COLUMN telegram_chat_id VARCHAR(30) UNIQUE; INSERT INTO canales (nombre, codigo, icono, color) VALUES ('Telegram', 'TELEGRAM', 'ph-telegram-logo', '#229ED9');`. La base local de esta máquina ya se migró el 22/10.
 
