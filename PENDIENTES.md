@@ -58,6 +58,8 @@ Ya no quedan pendientes grandes; lo que sigue son mejoras menores.
 
 ## En la nube (Render + Supabase, plan gratis)
 
+Publicada el 22/10 en **https://atynere.onrender.com**, con una copia de la base local de ese día. Proyecto de Supabase `atynere` (us-east-1). Las tablas tienen RLS activado sin políticas: la API automática de Supabase no las expone, y la app entra como dueña, así que no la afecta. **Las contraseñas de la nube no son `admin123`:** se cambiaron al publicar y están en `~/.atynere-claves-nube.txt` en la máquina de Mauro. Datos de conexión en `~/.atynere-supabase.txt`.
+
 - **App:** Render despliega el `Dockerfile` desde GitHub (`render.yaml`). `servidor.php` publica solo la página, `app.js`, `style.css`, `encuesta.html` y la API; `PENDIENTES.md`, los `.sql` y los scripts dan 404.
 - **Base:** PostgreSQL de Supabase por el *session pooler* (puerto 5432, usuario `postgres.<ref>`). El *transaction pooler* (6543) no sirve: la app usa sentencias preparadas.
 - **Variables en Render:** `DB_DRIVER=pgsql`, `DB_HOST`, `DB_PORT=5432`, `DB_NAME=postgres`, `DB_USER`, `DB_PASSWORD`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` (la misma que se usa en `setWebhook`; copia local en `~/.atynere-telegram-webhook-secret`).
