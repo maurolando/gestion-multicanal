@@ -140,6 +140,18 @@ class ConsultasController {
 
         $consulta['estadoBadge'] = self::mapEstadoBadge($consulta['estado']);
 
+        // Encuesta de satisfacción del caso (RF-41): null si no se envió; csat y nps en null si todavía no respondió
+        $enc = $db->prepare("SELECT csat, nps, comentario, respondido_en FROM encuesta_satisfaccion WHERE consulta_id = :id");
+        $enc->execute([':id' => $consulta['id']]);
+        $enc = $enc->fetch();
+        $consulta['encuesta'] = $enc ? [
+            'respondida' => $enc['respondido_en'] !== null,
+            'csat' => $enc['csat'] !== null ? (int)$enc['csat'] : null,
+            'nps' => $enc['nps'] !== null ? (int)$enc['nps'] : null,
+            'comentario' => $enc['comentario'],
+            'fecha' => $enc['respondido_en'] ? date('d/m/Y H:i', strtotime($enc['respondido_en'])) : null,
+        ] : null;
+
         // Obtener historial de interacciones / mensajes de este ticket
         $msgStmt = $db->prepare("
             SELECT 

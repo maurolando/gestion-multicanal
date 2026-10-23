@@ -163,9 +163,12 @@ class ReportesController {
 
         // RF-41: encuestas de las consultas del período
         $stmtEnc = $db->prepare("
-            SELECT e.csat, e.nps FROM encuesta_satisfaccion e
+            SELECT e.csat, e.nps, e.comentario, e.respondido_en, co.codigo_ticket, cl.nombre_completo AS cliente
+            FROM encuesta_satisfaccion e
             INNER JOIN consultas co ON co.id = e.consulta_id
+            INNER JOIN clientes cl ON cl.id = co.cliente_id
             " . ($filtroPeriodo ? "WHERE $filtroPeriodo" : '') . "
+            ORDER BY e.respondido_en DESC
         ");
         $stmtEnc->execute($params);
         $encuestas = $stmtEnc->fetchAll();
@@ -201,7 +204,16 @@ class ReportesController {
                 'volumen' => $cant,
                 'tiempo_primera_respuesta_min' => $promedio($porCanal[$nombre]['tiempos'] ?? [])
             ], array_keys($volumen), array_values($volumen)),
-            'agentes' => $agentes
+            'agentes' => $agentes,
+            // Cada respuesta, con su comentario, las más recientes primero
+            'respuestas_encuesta' => array_map(fn($e) => [
+                'codigo_ticket' => $e['codigo_ticket'],
+                'cliente' => $e['cliente'],
+                'csat' => (int)$e['csat'],
+                'nps' => (int)$e['nps'],
+                'comentario' => $e['comentario'],
+                'fecha' => date('d/m/Y H:i', strtotime($e['respondido_en'])),
+            ], array_slice($respondidas, 0, 50))
         ], 'Analítica de reportes recuperada');
     }
 

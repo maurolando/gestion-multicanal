@@ -442,6 +442,16 @@ const views = {
                         <p style="font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${esc(ticketActivo.solucion)}</p>
                     </div>
                 ` : ''}
+                ${ticketActivo.encuesta ? `
+                    <div class="encuesta-caso">
+                        <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 6px;"><i class="ph ph-star"></i> Encuesta de satisfacción</div>
+                        ${ticketActivo.encuesta.respondida ? `
+                            <div>${estrellas(ticketActivo.encuesta.csat)} <strong>${ticketActivo.encuesta.csat}/5</strong> · Recomendación <strong>${ticketActivo.encuesta.nps}/10</strong></div>
+                            ${ticketActivo.encuesta.comentario ? `<p class="encuesta-comentario">«${esc(ticketActivo.encuesta.comentario)}»</p>` : '<p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 6px;">Sin comentario.</p>'}
+                            <div style="color: var(--text-muted); font-size: 0.78rem; margin-top: 6px;">Respondida el ${esc(ticketActivo.encuesta.fecha)}</div>
+                        ` : '<div style="color: var(--text-muted); font-size: 0.9rem;">Enviada. El cliente todavía no respondió.</div>'}
+                    </div>
+                ` : ''}
             </div>
 
             <div style="padding: 16px; border-top: 1px solid var(--border-color); background: white;">
@@ -646,6 +656,24 @@ const views = {
                 ${kpi('Tasa de Resolución', k.tasa_resolucion != null ? k.tasa_resolucion + '%' : sinDatos, r ? `${k.resueltas} de ${r.total_consultas} consultas resueltas` : '')}
                 ${kpi('Tickets Escalados', k.tickets_escalados != null ? k.tickets_escalados + '%' : sinDatos, r ? `${k.escaladas} a cargo de un supervisor` : '', '#E1306C')}
             </div>
+        </div>
+
+        <div class="card" style="margin-top: 24px;">
+            <h3 class="card-title mb-4">Respuestas de la encuesta</h3>
+            ${r && r.respuestas_encuesta.length ? `
+            <div style="overflow-x: auto;">
+                <table class="tabla-encuestas">
+                    <thead><tr><th>Fecha</th><th>Consulta</th><th>Cliente</th><th>Satisfacción</th><th>Recomendación</th><th>Comentario</th></tr></thead>
+                    <tbody>${r.respuestas_encuesta.map(e => `<tr>
+                        <td style="white-space: nowrap;">${esc(e.fecha)}</td>
+                        <td><a href="#" onclick="event.preventDefault(); abrirNotificacion('${esc(e.codigo_ticket)}')">${esc(e.codigo_ticket)}</a></td>
+                        <td>${esc(e.cliente)}</td>
+                        <td style="white-space: nowrap;">${estrellas(e.csat)} ${e.csat}/5</td>
+                        <td>${e.nps}/10</td>
+                        <td>${e.comentario ? esc(e.comentario) : '<span style="color: var(--text-muted);">—</span>'}</td>
+                    </tr>`).join('')}</tbody>
+                </table>
+            </div>` : `<p style="color: var(--text-muted);">${r ? 'Ninguna encuesta respondida en el período.' : sinDatos}</p>`}
         </div>
     `;
     },
@@ -1885,6 +1913,7 @@ async function cargarMensajesConsulta(consulta) {
     if (!detalle) return;
     consulta.mensajes = detalle.mensajes;
     consulta.solucion = detalle.solucion;
+    consulta.encuesta = detalle.encuesta;
     consulta.mensajesCargados = true;
     if (state.selectedConsultaId === consulta.id) render();
 }
@@ -2779,6 +2808,11 @@ function agregarOjos() {
 }
 new MutationObserver(agregarOjos).observe(document.body, { childList: true, subtree: true });
 agregarOjos();
+
+// Calificación de 1 a 5 en estrellas; el lector de pantalla lee el número
+function estrellas(n) {
+    return `<span class="estrellas" role="img" aria-label="${n} de 5 estrellas">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>`;
+}
 
 // Campanita: las consultas que otra persona te asignó (GET /api/notificaciones). Al abrirla se marcan leídas
 // en la base, así quedan leídas en cualquier computadora. Las nuevas aparecen también como aviso.

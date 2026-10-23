@@ -686,6 +686,15 @@ td {
 
 
 
+/* Encuesta de satisfacción: en la consulta y en Reportes */
+.encuesta-caso { background: #f6f1fc; border: 1px solid #d9c8f0; padding: 16px; border-radius: 12px; }
+.encuesta-comentario { margin-top: 8px; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; font-style: italic; }
+.estrellas { color: #F5A623; letter-spacing: 1px; }
+.tabla-encuestas { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.tabla-encuestas th { text-align: left; color: var(--text-muted); font-weight: 600; font-size: 0.8rem; padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
+.tabla-encuestas td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+.tabla-encuestas a { color: var(--primary-main); font-weight: 600; text-decoration: none; white-space: nowrap; }
+
 /* Campanita de notificaciones y su panel */
 .notif { position: relative; }
 .notif-panel {
