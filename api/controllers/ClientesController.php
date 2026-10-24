@@ -210,11 +210,26 @@ class ClientesController {
 
         $db = Database::getConnection();
 
-        $stmt = $db->prepare("DELETE FROM clientes WHERE id = :id");
-        $stmt->execute([':id' => $id]);
-        if ($stmt->rowCount() === 0) {
+        $cliente = $db->prepare("SELECT nombre_completo FROM clientes WHERE id = :id");
+        $cliente->execute([':id' => $id]);
+        $nombre = $cliente->fetchColumn();
+        if ($nombre === false) {
             Response::notFound('Cliente no encontrado');
         }
+
+        $db->beginTransaction();
+        // Sus consultas se borran en cascada: dejar la baja de cada una en el historial, como al borrar una consulta sola (RF-50)
+        $consultas = $db->prepare("SELECT id, codigo_ticket, estado, usuario_asignado_id, asunto FROM consultas WHERE cliente_id = :id");
+        $consultas->execute([':id' => $id]);
+        $actorId = Auth::usuarioId();
+        foreach ($consultas->fetchAll() as $c) {
+            ConsultasController::registrarHistorial($db, $c['id'], $c['codigo_ticket'], 'Eliminación', $c['estado'], $c['usuario_asignado_id'], $actorId,
+                'Asunto: ' . $c['asunto'] . ' (se eliminó el cliente ' . $nombre . ')');
+        }
+
+        $stmt = $db->prepare("DELETE FROM clientes WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $db->commit();
 
         Response::json(['id' => (int)$id], 'Cliente eliminado correctamente');
     }
